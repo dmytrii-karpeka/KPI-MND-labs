@@ -1,169 +1,192 @@
 from random import randint
 import prettytable
 import math
-import numpy
-# Лабораторна робота №2 "ПРОВЕДЕННЯ ДВОФАКТОРНОГО ЕКСПЕРИМЕНТУ З
-# ВИКОРИСТАННЯМ ЛІНІЙНОГО РІВНЯННЯ РЕГРЕСІЇ" з предмету МОПЕ
+import numpy as np
+from scipy.stats import f, t
+from functools import partial
+import math
+
+# Лабораторна робота №3 "ПРОВЕДЕННЯ ТРЬОХФАКТОРНОГО ЕКСПЕРИМЕНТУ З ВИКОРИСТАННЯМ
+# ЛІНІЙНОГО РІВНЯННЯ РЕГРЕСІЇ" з предмету МОПЕ
 # Варіянт №210 Карпека Дмитрій
 
 #--------------------------------------------------Початкові умови-----------------------------------------------------
 variant = 210
-
-y_max = (30 - variant) * 10
-y_min = (20 - variant) * 10
-
 #--------------------------------------------------1-------------------------------------------------------------------
 # y = b0 + b1X1 + b2X2
 #--------------------------------------------------2-------------------------------------------------------------------
 
 x0 = 1
+
 x1_min = -25
 x1_max = -5
 x2_min = -70
 x2_max = -10
-m = 6
+x3_min = -25
+x3_max = -5
+
+x1_min_norm, x2_min_norm, x3_min_norm = -1, -1, -1
+x1_max_norm, x2_max_norm, x3_max_norm = 1, 1, 1
+
+m = 3
+n = 4
+
+x_average_max = sum([x1_max, x2_max, x3_max])/3
+x_average_min = sum([x1_min, x2_min, x3_min])/3
+
+y_max = round(200 + x_average_max)
+y_min = round(200 + x_average_min)
+
 
 pt = prettytable.PrettyTable()
-pt.field_names = ["X1", "X2"] + ["Y" + str(x) for x in range(1, m+1)]
+pt.field_names = ["X0", "X1", "X2", "X3"] + ["Y" + str(x) for x in range(1, m+1)]
+
 
 #--------------------------------------------------3-------------------------------------------------------------------
-
-def matrix_plan(m, ymin, ymax, n=3):
+def matrix_plan(m, ymin, ymax, n=n):
     return [[randint(ymin, ymax) for _ in range(m)] for _ in range(n)]
 
 
 matrix_y = matrix_plan(m, y_min, y_max)
-matrix_y = [[x1_min, x2_min] + matrix_y[0],
-            [x1_max, x2_min] + matrix_y[1],
-            [x1_min, x2_max] + matrix_y[2]]
+matrix_y = [[x0, x1_min_norm, x2_min_norm, x3_min_norm] + matrix_y[0],
+            [x0, x1_min_norm, x2_max_norm, x3_max_norm] + matrix_y[1],
+            [x0, x1_max_norm, x2_min_norm, x3_max_norm] + matrix_y[2],
+            [x0, x1_max_norm, x2_max_norm, x3_min_norm] + matrix_y[2]]
 pt.add_rows(matrix_y)
 
 print("3) Заповнена матриця планування експерименту для m={0}:".format(m))
 print(pt)
-print("Значення факторів не нормовані")
+print("Значення факторів нормовані")
+
 #--------------------------------------------------4-------------------------------------------------------------------
 #4.1
 def average(list):
     return sum(list) / len(list)
 
 
-y1 = round(average(matrix_y[0][2:len(matrix_y[0])]), 2)
-y2 = round(average(matrix_y[1][2:len(matrix_y[1])]), 2)
-y3 = round(average(matrix_y[2][2:len(matrix_y[2])]), 2)
-print("4) Перевірка дисперсії за критерієм Романовського:")
-print("Середнє значення ф-ції відгуку у рядку:\ny1 = {0}\ny2 = {1}\ny3 = {2}".format(y1, y2, y3))
-#4.2
-def disp(row_y, y_average):
-    sigma_squared = 0
-    for y in row_y:
-        sigma_squared += (y - y_average)**2
-    sigma_squared = sigma_squared/len(row_y)
-    return sigma_squared
+y1 = round(average(matrix_y[0][m+1:len(matrix_y[0])]), 2)
+y2 = round(average(matrix_y[1][m+1:len(matrix_y[1])]), 2)
+y3 = round(average(matrix_y[2][m+1:len(matrix_y[2])]), 2)
+y4 = round(average(matrix_y[3][m+1:len(matrix_y[3])]), 2)
+print("Середнє значення ф-ції відгуку у рядку:")
+for _ in range(0, m+1):
+    yn = round(average(matrix_y[_][m+1:len(matrix_y[_])]), 2)
+    print("y{0} = {1}".format(_+1, yn))
 
+matrix_natur = [[x1_min, x2_min, x3_min],
+                [x1_min, x2_max, x3_max],
+                [x1_max, x2_min, x3_max],
+                [x1_max, x2_max, x3_min]]
+# TODO: mxn, my, an DONE
+mx1 = average([i[0] for i in matrix_natur])
+mx2 = average([i[1] for i in matrix_natur])
+mx3 = average([i[2] for i in matrix_natur])
+my = average([y1, y2, y3, y4])
 
-d1 = round(disp(matrix_y[0][2:len(matrix_y[0])], y1), 2)
-d2 = round(disp(matrix_y[1][2:len(matrix_y[1])], y2), 2)
-d3 = round(disp(matrix_y[2][2:len(matrix_y[2])], y3), 2)
-print("Знайдемо дисперсію по рядках:\nD1 = {0}\nD2 = {1}\nD3 = {2}".format(d1, d2, d3))
-#4.3
-funddev = round(math.sqrt((2*(2*m - 2))/(m*(m-4))), 3)
-print("Основне відхилення: ", funddev)
-#4.4
-def fuvn(dn, dm):
-    if dn >= dm:
-        fuv = dn/dm
-    else:
-        fuv = dm/dn
-    return fuv
+a1 = average([matrix_natur[0][0]*y1, matrix_natur[1][0]*y2, matrix_natur[2][0]*y3, matrix_natur[3][0]*y4])
+a2 = average([matrix_natur[0][1]*y1, matrix_natur[1][1]*y2, matrix_natur[2][1]*y3, matrix_natur[3][1]*y4])
+a3 = average([matrix_natur[0][2]*y1, matrix_natur[1][2]*y2, matrix_natur[2][2]*y3, matrix_natur[3][2]*y4])
+# TODO: aij, i==j DONE
+a11 = average([x*x for x in [matrix_natur[0][0], matrix_natur[1][0], matrix_natur[2][0], matrix_natur[3][0]]])
+a22 = average([x*x for x in [matrix_natur[0][1], matrix_natur[1][1], matrix_natur[2][1], matrix_natur[3][1]]])
+a33 = average([x*x for x in [matrix_natur[0][2], matrix_natur[1][2], matrix_natur[2][2], matrix_natur[3][2]]])
+# TODO: aij DONE
+a12 = average([matrix_natur[0][0]*matrix_natur[0][1], matrix_natur[1][0]*matrix_natur[1][1], matrix_natur[2][0]*matrix_natur[2][1], matrix_natur[3][0]*matrix_natur[3][1]])
+a21 = a12
+a13 = average([matrix_natur[0][0]*matrix_natur[0][2], matrix_natur[1][0]*matrix_natur[1][2], matrix_natur[2][0]*matrix_natur[2][2], matrix_natur[3][0]*matrix_natur[3][2]])
+a31 = a13
+a23 = average([matrix_natur[0][1]*matrix_natur[0][2], matrix_natur[1][1]*matrix_natur[1][2], matrix_natur[2][1]*matrix_natur[2][2], matrix_natur[3][1]*matrix_natur[3][2]])
+a32 = a23
+# TODO: bi DONE
+b0 = np.linalg.det(np.array([[my, mx1, mx2, mx3], [a1, a11, a12, a13], [a2, a12, a22, a32], [a3, a13, a23, a33]])) / np.linalg.det(np.array([[1, mx1, mx2, mx3], [mx1, a11, a12, a13], [mx2, a12, a22, a32], [mx3, a13, a23, a33]]))
+b1 = np.linalg.det(np.array([[1, my, mx2, mx3], [mx1, a1, a12, a13], [mx2, a2, a22, a32], [mx3, a3, a23, a33]])) / np.linalg.det(np.array([[1, mx1, mx2, mx3], [mx1, a11, a12, a13], [mx2, a12, a22, a32], [mx3, a13, a23, a33]]))
+b2 = np.linalg.det(np.array([[1, mx1, my, mx3], [mx1, a11, a1, a13], [mx2, a12, a2, a32], [mx3, a13, a3, a33]])) / np.linalg.det(np.array([[1, mx1, mx2, mx3], [mx1, a11, a12, a13], [mx2, a12, a22, a32], [mx3, a13, a23, a33]]))
+b3 = np.linalg.det(np.array([[1, mx1, mx2, my], [mx1, a11, a12, a1], [mx2, a12, a22, a2], [mx3, a13, a23, a3]])) / np.linalg.det(np.array([[1, mx1, mx2, mx3], [mx1, a11, a12, a13], [mx2, a12, a22, a32], [mx3, a13, a23, a33]]))
+print("Отримане рівняння регресії:\ny = {0} + ({1})*x1 + ({2})*x2 + ({3})*x3".format(round(b0, 3), round(b1, 3), round(b2, 3), round(b3, 3)))
+# TODO: check DONE
+print("Перевірка:")
+for i in range(4):
+    y = b0 + b1*matrix_natur[i][0] + b2*matrix_natur[i][1] + b3*matrix_natur[i][2]
+    print("y{0} = {1} + ({2})*{3} + ({4})*{5} + ({6})*{7} = {8}".format(i, round(b0,3), round(b1,3), matrix_natur[i][0], round(b2,3), matrix_natur[i][1], round(b3,3), matrix_natur[i][2], round(y,2)))
 
+# TODO Cohren criteria DONE
+s_sq_y1 = average([(y1j - y1)**2 for y1j in matrix_y[0][m+1:len(matrix_y[0])]])
+s_sq_y2 = average([(y2j - y2)**2 for y2j in matrix_y[1][m+1:len(matrix_y[1])]])
+s_sq_y3 = average([(y3j - y3)**2 for y3j in matrix_y[2][m+1:len(matrix_y[2])]])
+s_sq_y4 = average([(y4j - y4)**2 for y4j in matrix_y[3][m+1:len(matrix_y[3])]])
+Gp = max([s_sq_y1, s_sq_y2, s_sq_y3, s_sq_y4])/sum([s_sq_y1, s_sq_y2, s_sq_y3, s_sq_y4])
 
-fuv1 = round(fuvn(d1, d2), 3)
-fuv2 = round(fuvn(d2, d3), 3)
-fuv3 = round(fuvn(d1, d3), 3)
-print("Обчислення Fuv:\nFuv1 = {0}\nFuv2 = {1}\nFuv3 = {2}".format(fuv1, fuv2, fuv3))
-#4.5
-def tetta_uvn(fuv, m=m):
-    return ((m - 2)/m * fuv)
+f1 = m-1
+f2 = n
+f3 = f1*f2
+q = 0.05
 
+def cohren(f1, f2, q=q):
+    q1 = q / f1
+    fisher_value = f.ppf(q=1 - q1, dfn=f2, dfd=(f1 - 1) * f2)
+    return fisher_value / (fisher_value + f1 - 1)
+Gt = cohren(f1, f2)
+if Gp < Gt:
+    print("Дисперсія однорідна")
+    print(f"Gp={round(Gp,3)} < Gt={round(Gt,3)}")
+else:
+    print("Дисперсія неоднорідна")
 
-tetta_uv1 = round(tetta_uvn(fuv1), 4)
-tetta_uv2 = round(tetta_uvn(fuv2), 4)
-tetta_uv3 = round(tetta_uvn(fuv3), 4)
-print("Обчислення 0uv:\n0uv1 = {0}\n0uv2 = {1}\n0uv3 = {2}".format(tetta_uv1, tetta_uv2, tetta_uv3))
-#4.6
-def ruvn(tetta, fundev=funddev):
-    return abs(tetta - 1)/fundev
+# Student criteria DONE
+s_sq_aver = average([s_sq_y1, s_sq_y2, s_sq_y3, s_sq_y4])
+s_sq_b = s_sq_aver/(n*m)
+s_b = math.sqrt(s_sq_b)
 
-ruv1 = ruvn(tetta_uv1)
-ruv2 = ruvn(tetta_uv2)
-ruv3 = ruvn(tetta_uv3)
-print("Обчислення Ruv:\nRuv1 = {0}\nRuv2 = {1}\nRuv3 = {2}".format(ruv1, ruv2, ruv3))
-#4.7
-def criteria(r1, r2, r3, probability, m=m):
-    table = [[0, 2, 6, 8, 10, 12, 15, 20],
-             [0.99, 1.73, 2.16, 2.43, 2.62, 2.75, 2.9, 3.08],
-             [0.98, 1.72, 2.13, 2.37, 2.54, 2.66, 2.8, 2.96],
-             [0.95, 1.71, 2.1, 2.27, 2.41, 2.52, 2.64, 2.78],
-             [0.9, 1.69, 2, 2.17, 2.29, 2.39, 2.49, 2.62]]
-    rkr = 0
-    for i in table[1:len(table)]:
-        if i[0] == probability:
-            rkr = i[table[0].index(m)]
-    if r1 < rkr and r2 < rkr and r3 < rkr:
-        print("Дисперсія однорідна")
-    else:
-        print("Дисперсія неоднорідна")
+student = partial(t.ppf, q=1 - 0.025)
+t_student = student(df=f3)
 
-criteria(ruv1, ruv2, ruv3, 0.9)
-#5
-x1min_n, x2min_n = -1, -1
-x1max_n, x2max_n = 1, 1
-matrix_norm = [[x1min_n, x2min_n],
-               [x1max_n, x2min_n],
-               [x1min_n, x2max_n]]
+bet0 = sum(list(map(lambda x, y: x*y, [y1, y2, y3, y4], [row[0] for row in matrix_y])))/n
+bet1 = sum(list(map(lambda x, y: x*y, [y1, y2, y3, y4], [row[1] for row in matrix_y])))/n
+bet2 = sum(list(map(lambda x, y: x*y, [y1, y2, y3, y4], [row[2] for row in matrix_y])))/n
+bet3 = sum(list(map(lambda x, y: x*y, [y1, y2, y3, y4], [row[3] for row in matrix_y])))/n
 
-mx1 = sum([i[0] for i in matrix_norm])/3
-mx2 = sum([i[1] for i in matrix_norm])/3
-my = sum([y1, y2, y3])/3
-a1 = sum(i[0]**2 for i in matrix_norm) / 3
-a2 = sum([i[0]*i[1] for i in matrix_norm])/3
-a3 = sum(i[1]**2 for i in matrix_norm) / 3
+t0 = abs(bet0)/s_b
+t1 = abs(bet1)/s_b
+t2 = abs(bet2)/s_b
+t3 = abs(bet3)/s_b
 
-a11 = sum([matrix_norm[0][0]*y1, matrix_norm[1][0]*y2, matrix_norm[2][0]*y3])/3
-a22 = sum([matrix_norm[0][1]*y1, matrix_norm[1][1]*y2, matrix_norm[2][1]*y3])/3
+ts = [t0, t1, t2, t3]
+res_c = [x[1] for x in list(map(lambda t, b: [t, b], [t0, t1, t2, t3], [b0, b1, b2, b3])) if x[0] > t_student]
+res_t = [x[0] for x in list(map(lambda t, b: [t, b], [t0, t1, t2, t3], [b0, b1, b2, b3])) if x[0] > t_student]
+excluded_c = [x[1] for x in list(map(lambda t, b: [t, b], [t0, t1, t2, t3], [b0, b1, b2, b3])) if not x[0] > t_student]
 
-b0 = round(numpy.linalg.det([[my, mx1, mx2], [a11, a1, a2], [a22, a2, a3]]) / numpy.linalg.det([[1, mx1, mx2], [mx1, a1, a2], [mx2, a2, a3]]), 2)
-b1 = round(numpy.linalg.det([[1, my, mx2], [mx1, a11, a2], [mx2, a22, a3]]) / numpy.linalg.det([[1, mx1, mx2], [mx1, a1, a2], [mx2, a2, a3]]), 2)
-b2 = round(numpy.linalg.det([[1, mx1, my], [mx1, a1, a11], [mx2, a2, a22]]) / numpy.linalg.det([[1, mx1, mx2], [mx1, a1, a2], [mx2, a2, a3]]), 2)
-print("5) Розрахунок нормованих коефіцієнтів рівняння регресії:\nmx1 = {0}\nmx2 = {1}\nmy = {2}\na1 = {3}\na2 = {4}\na3 = {5}\nb0 = {6}\nb1 = {7}\nb2 = {8}".format(round(mx1, 2), round(mx2, 2), round(my, 2), round(a1, 2), round(a2, 2), round(a3, 2), round(b0, 2), round(b1, 2), round(b2, 2)))
-print("Нормоване рівняння регресії:\ny = {0} + {1}*x1 + {2}*x2".format(b0, b1, b2))
+for i in range(4):
+    matrix_natur[i].insert(0, 1)
+def result_x(ni):
+    res_x = []
+    for t in res_t:
+        if ts.index(t) == res_t.index(t):
+            res_x.append(matrix_natur[ni][ts.index(t)])
+    return res_x
 
-y1_check = round(b0 + b1*matrix_norm[0][0] + b2*matrix_norm[0][1], 2)
-y2_check = round(b0 + b1*matrix_norm[1][0] + b2*matrix_norm[1][1], 2)
-y3_check = round(b0 + b1*matrix_norm[2][0] + b2*matrix_norm[2][1], 2)
-print("Перевірка y1:\n{0} + {1}*{2} + {3}*{4} = {5} = {6}".format(b0, b1, matrix_norm[0][0], b2, matrix_norm[0][1], y1_check, y1))
-print("Перевірка y2:\n{0} + {1}*{2} + {3}*{4} = {5} = {6}".format(b0, b1, matrix_norm[1][0], b2, matrix_norm[1][1], y2_check, y2))
-print("Перевірка y3:\n{0} + {1}*{2} + {3}*{4} = {5} = {6}".format(b0, b1, matrix_norm[2][0], b2, matrix_norm[2][1], y3_check, y3))
+print(f"Коефіцієнти {[round(c,3) for c in excluded_c]} приймаються незначними при рівні значимости 0.05, тобто вони виключаються із рівняння")
+print("Коефіцієнти, що залишились " + str([round(c,3) for c in res_c]))
 
-#6
-#TODO: end 6) and commit lab, pin a link in GT, notify teacher
-print("Натуралізація коефіцієнтів:")
-delta_x1 = abs(x1_max - x1_min)/2
-delta_x2 = abs(x2_max - x2_min)/2
-print("delta x1 = {0}\ndelta x2 = {1}".format(delta_x1, delta_x2))
-x10 = (x1_max + x1_min)/2
-x20 = (x2_max + x2_min)/2
-print("x10 = {0}\nx20 = {1}".format(x10, x20))
-a0 = round(b0 - b1*x10/delta_x1 - b2*x20/delta_x2, 2)
-print("a0 = b0 - b1*x10/delta_x - b2*x20/delta_x2 =", a0)
-a1 = round(b1/delta_x1, 3)
-a2 = round(b2/delta_x2, 3)
-print("a1 = {0}\na2 = {1}".format(a1, a2))
-print("Натуралізоване рівняння регресії:\ny = {0} + {1}*x1 + {2}*x2".format(a0, a1, a2))
+def regression(b, x):
+    return round(sum(list(map(lambda i, j: i*j, b, x))),3)
 
-ych1 = round(a0 + a1*x1_min + a2*x2_min, 2)
-ych2 = round(a0 + a1*x1_max + a2*x2_min, 2)
-ych3 = round(a0 + a1*x1_min + a2*x2_max, 2)
-print("Перевірка по рядках:\ny1 = {0}, y2 = {1}, y3 = {2}".format(ych1, ych2, ych3))
-if abs(y1_check - ych1)/ych1 < 0.05 and abs(y2_check - ych2)/ych2 < 0.05 and abs(y3_check - ych3)/ych3 < 0.05:
-    print("Коефіцієнти натуралізованого рівняння регресії вірні")
+print(f"Значення 'y' із коефіцієнтами {[round(c,3) for c in res_c]}:")
+for i in range(1, 4):
+    print("y{0} = {1}".format(i, regression(res_c, result_x(i-1))))
+
+# Fisher criteria
+y1_f = regression(res_c, result_x(0))
+y2_f = regression(res_c, result_x(1))
+y3_f = regression(res_c, result_x(2))
+y4_f = regression(res_c, result_x(3))
+d = len(res_c)
+f4 = n - d
+s_sq_ad = (m/(n - d)) * sum(list(map(lambda y, yf: (y - yf)**2, [y1, y2, y3, y4], [y1_f, y2_f, y3_f, y4_f])))
+fp = s_sq_ad/s_sq_b
+
+fisher = partial(f.ppf, q=1 - 0.05)
+f_t = fisher(dfn=f4, dfd=f3)
+if fp < f_t:
+    print(f'Fp={fp} < Ft={f_t}, отже математична модель адекватна експериментальним даним')
+else:
+    print(f'Fp={fp} >= Ft={f_t}, отже математична модель не адекватна експериментальним даним')
