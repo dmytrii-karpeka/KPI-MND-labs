@@ -3,6 +3,7 @@ import prettytable
 import math
 from scipy.stats import f, t
 from functools import partial
+import time
 
 # Лабораторна робота №4 "ПРОВЕДЕННЯ ТРЬОХФАКТОРНОГО ЕКСПЕРИМЕНТУ З ВИКОРИСТАННЯМ
 # ЛІНІЙНОГО РІВНЯННЯ РЕГРЕСІЇ З УРАХУВАННЯМ ЕФЕКТУ ВЗАЄМОДІЇ" з предмету МОПЕ
@@ -32,6 +33,10 @@ natur_x = [ [min_x[0], min_x[1], min_x[2]],
             [max_x[0], max_x[1], min_x[2]],
             [max_x[0], max_x[1], max_x[2]] ]
 
+cohrane_time = 0
+student_time = 0
+fisher_time = 0
+
 def experiment(m=3, n=8):
 
     regression_str = 'y = {} + {} * x1 + {} * x2 + {} * x3 + {} * x1x2 + {} * x1x3 + {} * x2x3 + {} * x1x2x3'
@@ -52,8 +57,9 @@ def experiment(m=3, n=8):
         return [round_to_2(average(list(map(lambda y: (y - aver_list_y[i]) ** 2, list_y[i])))) for i in range(len(list_y))]
 
     def cochrane_criteria(S_y):
-        global m
+        global m, cohrane_time
         print("\nКритерій Кохрена\n")
+        cohrane_time_begin = time.perf_counter()
         Gp = max(S_y) / sum(S_y)
         q = 0.05
         q_ = q / f2
@@ -62,14 +68,20 @@ def experiment(m=3, n=8):
         print("Тест Кохрена: Gr = " + str(round(Gp, 3)))
         if Gp < Gt:
             print("Дисперсії однорідні з імовірністю 0.95")
+            cohrane_time_end = time.perf_counter()
+            cohrane_time = cohrane_time_end - cohrane_time_begin
             pass
         else:
             print("\nДисперсії неоднорідні.\nПовтор експерименту для m + 1\n")
+            cohrane_time_end = time.perf_counter()
+            cohrane_time = cohrane_time_end - cohrane_time_begin
             m = m + 1
             experiment(m)
 
     def student_criteria(S_y, d):
+        global student_time
         print("\nКритерій Ст'юдента\n")
+        student_time_begin = time.perf_counter()
         bettaList = [sum(S_y) * x0[0] / n,
                      average(list(map(multiplication, S_y, x1i))),
                      average(list(map(multiplication, S_y, x2i))),
@@ -87,12 +99,15 @@ def experiment(m=3, n=8):
                 list_b[i] = 0
                 d -= 1
                 print('Коефіцієнт b' + str(i) + ' незначимий, тому виключається із рівняння регресії')
+        student_time_end = time.perf_counter()
+        student_time = student_time_end - student_time_begin
         print("\nСкореговане рівняння регресії:")
         print(regression_str.format(*map(round_to_2, list_b)))
 
     def fisher_criteria(d):
-        global m
+        global m, fisher_time
         print("\nКритерій Фішера\n")
+        fisher_time_begin = time.perf_counter()
         f4 = n - d
         S_ad = (m * sum(
             [(list_b[0] + list_b[1] * x1i[i] + list_b[2] * x2i[i] + list_b[3] * x3i[i] + list_b[4] * norm_x12[i] +
@@ -102,9 +117,13 @@ def experiment(m=3, n=8):
 
         if Fp > f.ppf(q=0.95, dfn=f4, dfd=f3):  # перевірка критерію Фішера з використанням scipy
             print('Математична модель неадекватна експериментальним даним на рівні значимості 0.05.\nПовтор експерименту для m+1')
+            fisher_time_end = time.perf_counter()
+            fisher_time = fisher_time_end - fisher_time_begin
             m = m + 1
             experiment(m)
         else:
+            fisher_time_end = time.perf_counter()
+            fisher_time = fisher_time_end - fisher_time_begin
             print('Математична модель адекватна експериментальним даним на рівні значущості 0.05')
 
     def printed_matrixes():
@@ -175,3 +194,4 @@ def experiment(m=3, n=8):
 #--------------------
 m = 3
 experiment(m)
+print("\nЧас перевірок:\nКритерій Кохрена - {}\nКритерій Ст'юдента - {}\nКритерій Фішера - {}".format(*[cohrane_time, student_time, fisher_time]))
