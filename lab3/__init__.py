@@ -41,7 +41,7 @@ y_min = round(200 + x_average_min)
 pt = prettytable.PrettyTable()
 pt.field_names = ["X0", "X1", "X2", "X3"] + ["Y" + str(x) for x in range(1, m+1)]
 
-
+regression_str = 'y = {} + {} * x1 + {} * x2 + {} * x3'
 #--------------------------------------------------3-------------------------------------------------------------------
 def matrix_plan(m, ymin, ymax, n=n):
     return [[randint(ymin, ymax) for _ in range(m)] for _ in range(n)]
@@ -103,6 +103,7 @@ b1 = np.linalg.det(np.array([[1, my, mx2, mx3], [mx1, a1, a12, a13], [mx2, a2, a
 b2 = np.linalg.det(np.array([[1, mx1, my, mx3], [mx1, a11, a1, a13], [mx2, a12, a2, a32], [mx3, a13, a3, a33]])) / np.linalg.det(np.array([[1, mx1, mx2, mx3], [mx1, a11, a12, a13], [mx2, a12, a22, a32], [mx3, a13, a23, a33]]))
 b3 = np.linalg.det(np.array([[1, mx1, mx2, my], [mx1, a11, a12, a1], [mx2, a12, a22, a2], [mx3, a13, a23, a3]])) / np.linalg.det(np.array([[1, mx1, mx2, mx3], [mx1, a11, a12, a13], [mx2, a12, a22, a32], [mx3, a13, a23, a33]]))
 print("Отримане рівняння регресії:\ny = {0} + ({1})*x1 + ({2})*x2 + ({3})*x3".format(round(b0, 3), round(b1, 3), round(b2, 3), round(b3, 3)))
+
 # TODO: check DONE
 print("Перевірка:")
 for i in range(4):
@@ -154,6 +155,7 @@ ts = [t0, t1, t2, t3]
 res_c = [x[1] for x in list(map(lambda t, b: [t, b], [t0, t1, t2, t3], [b0, b1, b2, b3])) if x[0] > t_student]
 res_t = [x[0] for x in list(map(lambda t, b: [t, b], [t0, t1, t2, t3], [b0, b1, b2, b3])) if x[0] > t_student]
 excluded_c = [x[1] for x in list(map(lambda t, b: [t, b], [t0, t1, t2, t3], [b0, b1, b2, b3])) if not x[0] > t_student]
+list_exc_b = [0 if b in res_c else round(b, 3) for b in [b0, b1, b2, b3]]
 
 for i in range(4):
     matrix_natur[i].insert(0, 1)
@@ -190,3 +192,5 @@ if fp < f_t:
     print(f'Fp={fp} < Ft={f_t}, отже математична модель адекватна експериментальним даним')
 else:
     print(f'Fp={fp} >= Ft={f_t}, отже математична модель не адекватна експериментальним даним')
+
+print("\nРівняння із незначимих коефіцієнтів\n" + regression_str.format(*list_exc_b))
