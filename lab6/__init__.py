@@ -14,43 +14,45 @@ variant = 210
 min_x = [-25, -70, -25]
 max_x = [-5, -10, -5]
 
-x0 = [1]
-norm_x= [[-1, -1, -1],
-         [-1, -1, 1],
-         [-1, 1, -1],
-         [-1, 1, 1],
-         [1, -1, -1],
-         [1, -1, 1],
-         [1, 1, -1],
-         [1, 1, 1],
-         [-1.73, 0, 0],
-         [1.73, 0, 0],
-         [0, -1.73, 0],
-         [0, 1.73, 0],
-         [0, 0, -1.73],
-         [0, 0, 1.73]]
+def experiment(min_x, max_x, m=3, n=14):
 
+    min_x = min_x
+    max_x = max_x
 
-x0i = list(map(lambda xmax, xmin: (xmax + xmin)/2, max_x, min_x))
-delta_xi = [xmax - xi for xmax, xi in zip(max_x, x0i)]
+    x0 = [1]
+    norm_x = [[-1, -1, -1],
+              [-1, -1, 1],
+              [-1, 1, -1],
+              [-1, 1, 1],
+              [1, -1, -1],
+              [1, -1, 1],
+              [1, 1, -1],
+              [1, 1, 1],
+              [-1.73, 0, 0],
+              [1.73, 0, 0],
+              [0, -1.73, 0],
+              [0, 1.73, 0],
+              [0, 0, -1.73],
+              [0, 0, 1.73]]
 
-natur_x = [ [min_x[0], min_x[1], min_x[2]],
-            [min_x[0], min_x[1], max_x[2]],
-            [min_x[0], max_x[1], min_x[2]],
-            [min_x[0], max_x[1], max_x[2]],
-            [max_x[0], min_x[1], min_x[2]],
-            [max_x[0], min_x[1], max_x[2]],
-            [max_x[0], max_x[1], min_x[2]],
-            [max_x[0], max_x[1], max_x[2]],
-            [round(-1.73*delta_xi[0]+x0i[0], 3), x0i[1], x0i[2]],
-            [round(1.73*delta_xi[0]+x0i[0], 3), x0i[1], x0i[2]],
-            [x0i[0], round(-1.73*delta_xi[1]+x0i[1], 3), x0i[2]],
-            [x0i[0], round(1.73*delta_xi[1]+x0i[1], 3), x0i[2]],
-            [x0i[0], x0i[1], round(-1.73*delta_xi[2]+x0i[2], 3)],
-            [x0i[0], x0i[1], round(1.73*delta_xi[2]+x0i[2], 3)]
-            ]
+    x0i = list(map(lambda xmax, xmin: (xmax + xmin) / 2, max_x, min_x))
+    delta_xi = [xmax - xi for xmax, xi in zip(max_x, x0i)]
 
-def experiment(m=3, n=14):
+    natur_x = [[min_x[0], min_x[1], min_x[2]],
+               [min_x[0], min_x[1], max_x[2]],
+               [min_x[0], max_x[1], min_x[2]],
+               [min_x[0], max_x[1], max_x[2]],
+               [max_x[0], min_x[1], min_x[2]],
+               [max_x[0], min_x[1], max_x[2]],
+               [max_x[0], max_x[1], min_x[2]],
+               [max_x[0], max_x[1], max_x[2]],
+               [round(-1.73 * delta_xi[0] + x0i[0], 3), x0i[1], x0i[2]],
+               [round(1.73 * delta_xi[0] + x0i[0], 3), x0i[1], x0i[2]],
+               [x0i[0], round(-1.73 * delta_xi[1] + x0i[1], 3), x0i[2]],
+               [x0i[0], round(1.73 * delta_xi[1] + x0i[1], 3), x0i[2]],
+               [x0i[0], x0i[1], round(-1.73 * delta_xi[2] + x0i[2], 3)],
+               [x0i[0], x0i[1], round(1.73 * delta_xi[2] + x0i[2], 3)]
+               ]
 
     regression_str = 'y = {} + {} * x1 + {} * x2 + {} * x3 + {} * x1x2 + {} * x1x3 + {} * x2x3 + {} * x1x2x3 + {} * x1**2 + {} * x2**2 + {} * x3**2'
 
@@ -87,7 +89,7 @@ def experiment(m=3, n=14):
         else:
             print("\nДисперсії неоднорідні.\nПовтор експерименту для m + 1\n")
             m = m + 1
-            experiment(m)
+            experiment(min_x, max_x, m)
 
     def student_criteria(S_y, d):
         print("\nКритерій Ст'юдента\n")
@@ -115,7 +117,7 @@ def experiment(m=3, n=14):
         print(regression_str.format(*map(round_to_2, list_b)))
 
     def fisher_criteria(d):
-        global m
+        global m, min_x, max_x
         print("\nКритерій Фішера\n")
         f4 = n - d
         S_ad = (m * sum(
@@ -125,9 +127,15 @@ def experiment(m=3, n=14):
         Fp = S_ad / Sb
 
         if Fp > f.ppf(q=0.95, dfn=f4, dfd=f3):  # перевірка критерію Фішера з використанням scipy
-            print('Математична модель неадекватна експериментальним даним на рівні значимості 0.05.\nПовтор експерименту для m+1')
+            print('Математична модель неадекватна експериментальним даним на рівні значимості 0.05.\nПовтор експерименту для m+1 та значень помножених на добуток значимих коефіцієнтів попередньої ітерації')
             m = m + 1
-            experiment(m)
+            list_b_additional = [b if b != 0 else 1 for b in list_b]
+            coefb = 1
+            for b in list_b_additional:
+                coefb *= b
+            min_x = [x*coefb for x in min_x]
+            max_x = [x*coefb for x in max_x]
+            experiment(min_x, max_x, m)
         else:
             print('Математична модель адекватна експериментальним даним на рівні значущості 0.05')
 
@@ -204,4 +212,4 @@ def experiment(m=3, n=14):
     fisher_criteria(d)
 #--------------------
 m = 3
-experiment(m)
+experiment(min_x, max_x, m)
