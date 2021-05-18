@@ -88,6 +88,7 @@ def experiment(m=3, n=15):
             experiment(m)
 
     def student_criteria(S_y, d):
+        global all_c
         print("\nКритерій Ст'юдента\n")
         bettaList = [sum(S_y) * x0[0] / n,
                      average(list(map(multiplication, S_y, x1i))),
@@ -109,6 +110,7 @@ def experiment(m=3, n=15):
                 list_b[i] = 0
                 d -= 1
                 print('Коефіцієнт b' + str(i) + ' незначимий, тому виключається із рівняння регресії')
+        all_c += d
         print("\nСкореговане рівняння регресії:")
         print(regression_str.format(*map(round_to_2, list_b)))
 
@@ -201,5 +203,8 @@ def experiment(m=3, n=15):
     student_criteria(S_y, d)
     fisher_criteria(d)
 #--------------------
-m = 3
-experiment(m)
+all_c = 0
+for i in range(100):
+    m = 3
+    experiment(m)
+print("Кількість значимих коефіцієнтів у сумі за 100 ітерацій програми: ", all_c)
